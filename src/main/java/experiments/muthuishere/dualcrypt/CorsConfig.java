@@ -22,8 +22,10 @@ public class CorsConfig {
         config.setAllowedOriginPatterns(
                 List.of(
                         "http://localhost:*",  // any localhost port
-                        "https://*.muthuishere.com",
-                        "https://muthuishere.com"
+                        "https://*.muthuishere.site",
+                        "https://muthuishere.site",
+                        "https://www.muthuishere.site",
+                        "https://www.*.muthuishere.site"
 
                 )
         );
