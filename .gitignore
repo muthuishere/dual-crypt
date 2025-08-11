@@ -36,3 +36,7 @@ out/
 ### VS Code ###
 .vscode/
 /frontend/dual-crypt-ui/.env
+/secrets.go
+./.kamal/secrets
+.env
+/.kamal/secrets
