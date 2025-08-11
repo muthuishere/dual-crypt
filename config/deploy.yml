@@ -1,5 +1,5 @@
 # Name of your application. Used to uniquely configure containers.
-service: plain-html-app
+service: dual-crypt-app
 
 # Name of the container image.
 image: muthuishere/myregistryproject/dual-crypt
@@ -8,6 +8,7 @@ image: muthuishere/myregistryproject/dual-crypt
 servers:
   web:
     - <%= ENV["WEB_SERVER_IP"] %>
+
   # job:
   #   hosts:
   #     - 192.168.0.1
@@ -21,10 +22,12 @@ proxy:
   host: dualcrypt.muthuishere.site
   # kamal-proxy connects to your container over port 80, use `app_port` to specify a different port.
   app_port: 8080
+  healthcheck:
+    path: /api/health
+    interval: 25
+    timeout: 10
 
-healthcheck:
-  path: /api/health
-  port: 8080
+
 # Credentials for your image host.
 registry:
   # Specify the registry server, if you're not using Docker Hub
