@@ -1,0 +1,22 @@
+version: '3'
+
+tasks:
+  build:
+    desc: Compile the application
+    cmds:
+      - ./gradlew build
+    silent: false
+
+  run:
+    desc: Run with log file
+    deps: [build]
+    cmds:
+      - ./gradlew bootRun --info >app.log 2>&1
+
+  dev:
+    desc: Run with console log
+    deps: [build]
+    env:
+      SPRING_DEVTOOLS_RESTART_ENABLED: "true"
+    cmds:
+      - ./gradlew bootRun --info

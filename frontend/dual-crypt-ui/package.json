@@ -1,0 +1,53 @@
+{
+  "name": "dual-crypt-ui",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:spring": "vite build --outDir ../../src/main/resources/static --emptyOutDir",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@headlessui/react": "^2.2.4",
+    "@heroicons/react": "^2.2.0",
+    "@mdx-js/react": "^3.1.0",
+    "@mdx-js/rollup": "^3.1.0",
+    "@tailwindcss/vite": "^4.1.11",
+    "@wooorm/starry-night": "^3.8.0",
+    "autoprefixer": "^10.4.21",
+    "fuse.js": "^7.1.0",
+    "github-markdown-css": "^5.8.1",
+    "gray-matter": "^4.0.3",
+    "hast-util-to-html": "^9.0.5",
+    "highlight.js": "^11.11.1",
+    "keen-slider": "^6.8.6",
+    "prismjs": "^1.30.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-markdown": "^10.1.0",
+    "react-router": "^7.7.1",
+    "react-syntax-highlighter": "^15.6.1",
+    "recharts": "^3.1.0",
+    "rehype-highlight": "^7.0.2",
+    "remark-gfm": "^4.0.1",
+    "remark-parse": "^11.0.0",
+    "remark-stringify": "^11.0.0",
+    "tailwindcss": "^4.1.11",
+    "unified": "^11.0.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.30.1",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@vitejs/plugin-react-swc": "^3.10.2",
+    "eslint": "^9.30.1",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.20",
+    "globals": "^16.3.0",
+    "vite": "^7.0.4"
+  }
+}
