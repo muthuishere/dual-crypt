@@ -1,27 +1,12 @@
-// API Configuration
-const API_CONFIG = {
-  // Base URL for the HTTP Serializer API
-  BASE_URL: 'http://localhost:8080',
-  
-  // API Endpoints
-  ENDPOINTS: {
-    PRODUCTS: '/products'
-  },
-  
-  // Default request timeout (in milliseconds)
-  TIMEOUT: 10000,
-  
-  // Supported serialization formats
-  FORMATS: {
-    JSON: 'application/json',
-    MSGPACK: 'application/msgpack',
-    CBOR: 'application/cbor',
-    PROTOBUF: 'application/x-protobuf'
-  }
-};
+
+
+
+
 
 // Helper function to build full URL
 export const buildUrl = (endpoint, params = {}) => {
+
+
   const url = new URL(endpoint, API_CONFIG.BASE_URL);
   
   // Add query parameters

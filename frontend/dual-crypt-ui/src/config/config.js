@@ -1,8 +1,17 @@
+
+let VITE_API_URL=import.meta.env.VITE_API_URL || "http://localhost";
+const mode = import.meta.env.MODE || "development";
+if (mode === "production") {
+  VITE_API_URL = "";  
+}
+
+console.log(VITE_API_URL);
+
 // API Configuration
 const API_CONFIG = {
   // Base URL for the Dual-Crypt API
   // If VITE_API_URL is not set, use relative path (for embedded deployment)
-  BASE_URL: import.meta.env.VITE_API_URL || '',
+  BASE_URL: VITE_API_URL,
   
   // API Endpoints
   ENDPOINTS: {
@@ -18,14 +27,13 @@ const API_CONFIG = {
       ENCRYPT: '/api/asymmetric/encrypt',
       DECRYPT: '/api/asymmetric/decrypt'
     },
-    // Serialization endpoints (for future use)
-    PRODUCTS: '/api/products'
+
   },
   
   // Default request timeout (in milliseconds)
   TIMEOUT: 10000,
 };
-
+console.log(import.meta.env)
 // Helper function to build full URL
 export const buildUrl = (endpoint, params = {}) => {
   const url = new URL(endpoint, API_CONFIG.BASE_URL.startsWith('http') 
