@@ -29,6 +29,8 @@ export default function SymmetricCrypto() {
     // State
     secretKey,
     salt,
+    setSecretKey,
+    setSalt,
     generateMode,
     setGenerateMode,
     encryptMode,
@@ -321,24 +323,43 @@ export default function SymmetricCrypto() {
             </button>
           </div>
 
-          {secretKey && (
-            <div className="mt-8 p-4 bg-gray-50 rounded-lg">
-              <div className="grid grid-cols-1 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Secret Key</label>
-                  <div className="p-3 bg-white border rounded-lg">
-                    <code className="text-xs text-gray-600 break-all font-mono">{secretKey}</code>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Salt</label>
-                  <div className="p-3 bg-white border rounded-lg">
-                    <code className="text-xs text-gray-600 break-all font-mono">{salt}</code>
-                  </div>
-                </div>
+          <div className="mt-8 p-4 bg-gray-50 rounded-lg">
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <strong>💡 Tip:</strong> All fields below are editable. You can modify the Secret Key and Salt manually, 
+                or generate new ones using the button above.
+              </p>
+            </div>
+            
+            <div className="grid grid-cols-1 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Secret Key
+                  <span className="text-xs text-gray-500 ml-2">(Editable)</span>
+                </label>
+                <textarea
+                  value={secretKey}
+                  onChange={(e) => setSecretKey(e.target.value)}
+                  placeholder="Enter or generate a secret key..."
+                  className="w-full p-3 border border-gray-300 rounded-lg font-mono text-xs resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  rows={3}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Salt
+                  <span className="text-xs text-gray-500 ml-2">(Editable)</span>
+                </label>
+                <textarea
+                  value={salt}
+                  onChange={(e) => setSalt(e.target.value)}
+                  placeholder="Enter or generate a salt..."
+                  className="w-full p-3 border border-gray-300 rounded-lg font-mono text-xs resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  rows={2}
+                />
               </div>
             </div>
-          )}
+          </div>
         </div>
       </div>
 
@@ -405,17 +426,24 @@ export default function SymmetricCrypto() {
           </div>
 
           {/* Encrypted Result */}
-          {ciphertext && (
-            <div className="p-4 sm:p-6 bg-gray-50 rounded-xl border border-gray-100">
-              <label className="block text-sm font-medium text-gray-700 mb-3">Encrypted Data</label>
-              <div className="p-4 bg-white border rounded-lg">
-                <code className="text-xs text-gray-600 break-all font-mono">{ciphertext}</code>
-              </div>
+          <div className="p-4 sm:p-6 bg-gray-50 rounded-xl border border-gray-100">
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              Encrypted Data
+              <span className="text-xs text-gray-500 ml-2">(Editable - paste encrypted data here for decryption)</span>
+            </label>
+            <textarea
+              value={ciphertext}
+              onChange={(e) => setCiphertext(e.target.value)}
+              placeholder="Encrypted data will appear here, or paste external encrypted data..."
+              className="w-full p-4 border border-gray-300 rounded-lg font-mono text-xs resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              rows={4}
+            />
+            {ciphertext && (
               <p className="text-xs text-gray-400 mt-2">
                 {new TextEncoder().encode(ciphertext).length} bytes (base64 encoded)
               </p>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Decrypt Section */}
           <div className="p-4 sm:p-6 bg-orange-50 rounded-xl border border-orange-100">

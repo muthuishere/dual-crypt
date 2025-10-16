@@ -1,32 +1,22 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import useAsymmetricCrypto from '../hooks/useAsymmetricCrypto.js';
-import CodeViewer from './CodeViewer.jsx';
-import { templateService } from '../services/TemplateService.js';
+import useAsymmetricCrypto from '../hooks/useAsymmetricCrypto';
 
-export default function AsymmetricCrypto() {
-  const [plaintext, setPlaintext] = useState('Hello, World! This is a test message for RSA encryption.');
-  const [ciphertext, setCiphertext] = useState('');
-  const [decryptedText, setDecryptedText] = useState('');
+export default function Sign() {
+  const [message, setMessage] = useState('Hello, this is a test message for JWT signing.');
+  const [jwtToken, setJwtToken] = useState('');
+  const [verificationResult, setVerificationResult] = useState(null);
   const [metrics, setMetrics] = useState(null);
-  
+
   // Operation status for toast notifications
   const [operationStatus, setOperationStatus] = useState({
     generating: false,
-    encrypting: false,
-    decrypting: false,
+    signing: false,
+    verifying: false,
     error: null,
-    errorTimeout: null
+    errorTimeout: null,
   });
-  
-  // Code viewer state
-  const [codeViewer, setCodeViewer] = useState({
-    visible: false,
-    currentContent: '',
-    fullContent: '',
-    title: 'Code Implementation'
-  });
-  
+
   const {
     // State
     publicKey,
@@ -34,25 +24,25 @@ export default function AsymmetricCrypto() {
     salt,
     generateMode,
     setGenerateMode,
-    encryptMode,
-    setEncryptMode,
-    decryptMode,
-    setDecryptMode,
+    signMode,
+    setSignMode,
+    verifyMode,
+    setVerifyMode,
     logs,
     serverStatus,
     webCryptoAvailable,
     
     // Actions
     generateKeys,
-    encrypt,
-    decrypt,
+    sign,
+    verify,
     clearAll,
     clearLogs,
     
     // Key setters
     setPublicKey,
     setPrivateKey,
-    setSalt
+    setSalt,
   } = useAsymmetricCrypto();
 
   // Helper function to set error with auto-dismiss
@@ -72,7 +62,6 @@ export default function AsymmetricCrypto() {
 
   // Handle key generation
   const handleGenerateKeys = async () => {
-    // Clear any previous errors
     setOperationStatus(prev => ({ ...prev, generating: true, error: null }));
     
     try {
@@ -93,117 +82,71 @@ export default function AsymmetricCrypto() {
     }
   };
 
-  // Handle encryption
-  const handleEncrypt = async () => {
-    // Clear any previous errors
-    setOperationStatus(prev => ({ ...prev, encrypting: true, error: null }));
+  // Handle signing
+  const handleSign = async () => {
+    setOperationStatus(prev => ({ ...prev, signing: true, error: null }));
     
     try {
-      const result = await encrypt(plaintext);
+      const result = await sign(message);
       if (result.success) {
-        setCiphertext(result.dataB64);
+        setJwtToken(result.jwtToken);
         setMetrics(prev => ({
           ...prev,
-          encryptTime: result.timing,
-          encryptMode: result.mode,
-          plaintextSize: result.metrics.plaintextSize,
-          ciphertextSize: result.metrics.ciphertextSize
+          signTime: result.timing,
+          signMode: result.mode,
+          messageSize: result.metrics?.messageSize,
+          jwtTokenSize: result.metrics?.jwtTokenSize
         }));
       } else {
-        setErrorWithTimeout(result.error || 'Encryption failed');
+        setErrorWithTimeout(result.error || 'JWT creation failed');
       }
     } catch (err) {
-      setErrorWithTimeout('Encryption failed: ' + err.message);
+      setErrorWithTimeout('JWT creation failed: ' + err.message);
     } finally {
-      setOperationStatus(prev => ({ ...prev, encrypting: false }));
+      setOperationStatus(prev => ({ ...prev, signing: false }));
     }
   };
 
-  // Handle decryption
-  const handleDecrypt = async () => {
-    // Clear any previous errors
-    setOperationStatus(prev => ({ ...prev, decrypting: true, error: null }));
+  // Handle verification
+  const handleVerify = async () => {
+    setOperationStatus(prev => ({ ...prev, verifying: true, error: null }));
     
     try {
-      const result = await decrypt(ciphertext);
+      const result = await verify(jwtToken);
       if (result.success) {
-        setDecryptedText(result.text);
+        setVerificationResult(result.verified);
         setMetrics(prev => ({
           ...prev,
-          decryptTime: result.timing,
-          decryptMode: result.mode
+          verifyTime: result.timing,
+          verifyMode: result.mode
         }));
       } else {
-        setErrorWithTimeout(result.error || 'Decryption failed');
+        setVerificationResult(false);
+        setErrorWithTimeout(result.error || 'JWT verification failed');
       }
     } catch (err) {
-      setErrorWithTimeout('Decryption failed: ' + err.message);
+      setVerificationResult(false);
+      setErrorWithTimeout('JWT verification failed: ' + err.message);
     } finally {
-      setOperationStatus(prev => ({ ...prev, decrypting: false }));
+      setOperationStatus(prev => ({ ...prev, verifying: false }));
     }
   };
 
   // Handle clearing all data
   const handleClearAll = () => {
-    // Clear any existing error timeout
     if (operationStatus.errorTimeout) {
       clearTimeout(operationStatus.errorTimeout);
     }
-    
-    // Reset all state
     clearAll();
-    setCiphertext('');
-    setDecryptedText('');
+    setJwtToken('');
+    setVerificationResult(null);
     setMetrics(null);
     setOperationStatus({
       generating: false,
-      encrypting: false,
-      decrypting: false,
+      signing: false,
+      verifying: false,
       error: null,
-      errorTimeout: null
-    });
-  };
-
-    // Show code viewer
-  const showCode = async (operation, mode) => {
-    try {
-      const context = {
-        publicKey,
-        privateKey,
-        plaintext,
-        ciphertext,
-        decryptedText
-      };
-
-       const currentContent = await templateService.getAsymmetricTemplate(operation, mode, context);
-      const fullContent = await templateService.getAsymmetricFullExplanation(generateMode, encryptMode, decryptMode, context);
-      const title = `${operation.charAt(0).toUpperCase() + operation.slice(1)} Implementation`;
-
-
-      setCodeViewer({
-        visible: true,
-        currentContent,
-        fullContent,
-        title
-      });
-    } catch (error) {
-      console.error('Error generating code content:', error);
-      setCodeViewer({
-        visible: true,
-        currentContent: 'Error generating code content',
-        fullContent: '',
-        title: 'Error'
-      });
-    }
-  };
-
-  // Close code viewer
-  const closeCodeViewer = () => {
-    setCodeViewer({
-      visible: false,
-      currentContent: '',
-      fullContent: '',
-      title: 'Code Implementation'
+      errorTimeout: null,
     });
   };
 
@@ -216,16 +159,16 @@ export default function AsymmetricCrypto() {
       label: `Generate (${metrics.generateMode === 'browser' ? 'JavaScript' : 'Spring Boot'})`
     },
     { 
-      name: 'Encrypt', 
-      time: metrics.encryptTime || 0, 
-      mode: metrics.encryptMode,
-      label: `Encrypt (${metrics.encryptMode === 'browser' ? 'JavaScript' : 'Spring Boot'})`
+      name: 'Sign', 
+      time: metrics.signTime || 0, 
+      mode: metrics.signMode,
+      label: `Sign (${metrics.signMode === 'browser' ? 'JavaScript' : 'Spring Boot'})`
     },
     { 
-      name: 'Decrypt', 
-      time: metrics.decryptTime || 0, 
-      mode: metrics.decryptMode,
-      label: `Decrypt (${metrics.decryptMode === 'browser' ? 'JavaScript' : 'Spring Boot'})`
+      name: 'Verify', 
+      time: metrics.verifyTime || 0, 
+      mode: metrics.verifyMode,
+      label: `Verify (${metrics.verifyMode === 'browser' ? 'JavaScript' : 'Spring Boot'})`
     }
   ].filter(item => item.time > 0) : [];
 
@@ -259,11 +202,16 @@ export default function AsymmetricCrypto() {
       {/* Header */}
       <div className="text-center space-y-2">
         <h1 className="text-4xl font-light text-gray-900">
-          Asymmetric Encryption
+          JWT Signatures
         </h1>
         <p className="text-lg text-gray-500">
-          RSA-2048 encryption testing
+          RSA-PSS signing and verification
         </p>
+        <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-100 max-w-2xl mx-auto">
+          <p className="text-sm text-blue-800">
+            ✏️ <strong>All fields are editable!</strong> You can manually enter or modify public keys, private keys, JWT tokens, and messages for testing different scenarios.
+          </p>
+        </div>
       </div>
 
       {/* Status Indicators */}
@@ -290,12 +238,7 @@ export default function AsymmetricCrypto() {
       <div className="bg-white rounded-2xl p-4 sm:p-8 shadow-sm border border-gray-100">
         <div className="text-center space-y-6">
           <h2 className="text-2xl font-light text-gray-900">Generate Key Pair</h2>
-          <p className="text-gray-500">Create new RSA-2048 public/private keys</p>
-          
-          {/* Information Banner */}
-          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
-            <p><strong>💡 Tip:</strong> All fields below (Public Key, Private Key, Salt, Encrypted Data) are fully editable. You can paste your own keys or data for testing.</p>
-          </div>
+          <p className="text-gray-500">Create new RSA-2048 public/private keys for signing</p>
           
           <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
             <select
@@ -317,201 +260,213 @@ export default function AsymmetricCrypto() {
             >
               {operationStatus.generating ? 'Generating...' : 'Generate New Key Pair'}
             </button>
-            <button
-              onClick={() => showCode('generate-keys', generateMode)}
-              className="w-full sm:w-auto px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors"
-            >
-              📖 Show Code
-            </button>
           </div>
 
           <div className="mt-8 p-4 bg-gray-50 rounded-lg">
             <div className="grid grid-cols-1 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Public Key (SPKI Base64)</label>
-                  <textarea
-                    value={publicKey || ''}
-                    onChange={(e) => setPublicKey(e.target.value)}
-                    className="w-full p-3 border border-gray-300 rounded-lg resize-vertical font-mono text-xs"
-                    rows="6"
-                    placeholder="Enter or paste your public key in SPKI Base64 format..."
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Private Key (PKCS#8 Base64)</label>
-                  <textarea
-                    value={privateKey || ''}
-                    onChange={(e) => setPrivateKey(e.target.value)}
-                    className="w-full p-3 border border-gray-300 rounded-lg resize-vertical font-mono text-xs"
-                    rows="8"
-                    placeholder="Enter or paste your private key in PKCS#8 Base64 format..."
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Salt</label>
-                  <input
-                    type="text"
-                    value={salt || ''}
-                    onChange={(e) => setSalt(e.target.value)}
-                    className="w-full p-3 border border-gray-300 rounded-lg font-mono text-xs"
-                    placeholder="Enter or paste your salt value..."
-                  />
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Public Key (SPKI Base64)</label>
+                <textarea
+                  value={publicKey}
+                  onChange={(e) => setPublicKey(e.target.value)}
+                  className="w-full p-3 bg-white border rounded-lg text-xs text-gray-600 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  rows={4}
+                  placeholder="Enter or paste your public key here..."
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  You can manually enter or edit your public key
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Private Key (PKCS#8 Base64)</label>
+                <textarea
+                  value={privateKey}
+                  onChange={(e) => setPrivateKey(e.target.value)}
+                  className="w-full p-3 bg-white border rounded-lg text-xs text-gray-600 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  rows={4}
+                  placeholder="Enter or paste your private key here..."
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  You can manually enter or edit your private key
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Salt (Optional)</label>
+                <textarea
+                  value={salt || ''}
+                  onChange={(e) => setSalt(e.target.value)}
+                  className="w-full p-3 bg-white border rounded-lg text-xs text-gray-600 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  rows={2}
+                  placeholder="Enter or paste your salt here (optional)..."
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  You can manually enter or edit your salt (used in some key generation processes)
+                </p>
               </div>
             </div>
+          </div>
         </div>
       </div>
 
-      {/* Main Encryption Interface */}
+      {/* Main Signing Interface */}
       <div className="bg-white rounded-2xl p-4 sm:p-8 shadow-sm border border-gray-100">
         <div className="space-y-8">
           <div className="text-center">
-            <h2 className="text-2xl font-light text-gray-900">Message Encryption</h2>
-            <p className="text-gray-500">Encrypt and decrypt your messages with RSA</p>
+            <h2 className="text-2xl font-light text-gray-900">Message Signing</h2>
+            <p className="text-gray-500">Sign and verify your messages with RSA JWT tokens</p>
           </div>
 
           {/* Input */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">Your Message</label>
             <textarea
-              value={plaintext}
-              onChange={(e) => setPlaintext(e.target.value)}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
               className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
               rows={4}
               placeholder="Enter your message here..."
             />
             <div className="flex justify-between items-center mt-2">
               <p className="text-xs text-gray-400">
-                {new TextEncoder().encode(plaintext).length} bytes
+                {new TextEncoder().encode(message).length} bytes
               </p>
-              {plaintext.length > 200 && (
-                <p className="text-xs text-red-500">
-                  ⚠️ Message too long for RSA (max ~200 chars)
-                </p>
-              )}
             </div>
           </div>
 
-          {/* Encrypt Section */}
-          <div className="p-4 sm:p-6 bg-purple-50 rounded-xl border border-purple-100">
+          {/* Sign Section */}
+          <div className="p-4 sm:p-6 bg-green-50 rounded-xl border border-green-100">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
               <div className="flex-1">
-                <h3 className="font-semibold text-purple-900">Encrypt Message</h3>
-                <p className="text-sm text-purple-700">Secure your message with RSA-2048</p>
+                <h3 className="font-semibold text-green-900">Sign Message</h3>
+                <p className="text-sm text-green-700">Create JWT token with your private key</p>
               </div>
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
                 <select
-                  value={encryptMode}
-                  onChange={(e) => setEncryptMode(e.target.value)}
-                  className="px-3 py-2 bg-white border border-purple-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  value={signMode}
+                  onChange={(e) => setSignMode(e.target.value)}
+                  className="px-3 py-2 bg-white border border-green-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                 >
                   <option value="browser">JavaScript</option>
                   <option value="server">Spring Boot</option>
                 </select>
                 <button
-                  onClick={handleEncrypt}
-                  disabled={!publicKey || !plaintext.trim() || plaintext.length > 200 || operationStatus.encrypting}
-                  className={`px-6 py-2 font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                    operationStatus.encrypting 
-                      ? 'bg-purple-400 text-white' 
-                      : 'bg-purple-600 text-white hover:bg-purple-700'
+                  onClick={handleSign}
+                  disabled={!privateKey || !message.trim() || operationStatus.signing}
+                  className={`px-6 py-2 font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                    operationStatus.signing 
+                      ? 'bg-green-400 text-white' 
+                      : 'bg-green-600 text-white hover:bg-green-700'
                   }`}
                 >
-                  {operationStatus.encrypting ? 'Encrypting...' : 'Encrypt'}
-                </button>
-                <button
-                  onClick={() => showCode('encrypt', encryptMode)}
-                  className="px-3 py-2 bg-purple-100 text-purple-700 text-sm font-medium rounded-lg hover:bg-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors"
-                >
-                  📖
+                  {operationStatus.signing ? 'Signing...' : 'Sign'}
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Encrypted Result */}
+          {/* JWT Token Result/Input */}
           <div className="p-4 sm:p-6 bg-gray-50 rounded-xl border border-gray-100">
-            <label className="block text-sm font-medium text-gray-700 mb-3">Encrypted Data</label>
+            <label className="block text-sm font-medium text-gray-700 mb-3">JWT Token (Signed or Input)</label>
             <textarea
-              value={ciphertext}
-              onChange={(e) => setCiphertext(e.target.value)}
-              className="w-full p-4 border border-gray-300 rounded-lg resize-vertical font-mono text-xs"
-              rows="4"
-              placeholder="Encrypted data will appear here, or paste your own encrypted data..."
+              value={jwtToken}
+              onChange={(e) => setJwtToken(e.target.value)}
+              className="w-full p-4 bg-white border rounded-lg text-xs text-gray-600 break-all font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              rows={4}
+              placeholder="JWT token will appear here after signing, or you can paste any JWT token for verification..."
             />
-            <p className="text-xs text-gray-400 mt-2">
-              {ciphertext ? `${new TextEncoder().encode(ciphertext).length} bytes (base64 encoded)` : 'No encrypted data'}
-            </p>
+            <div className="flex justify-between items-center mt-2">
+              <p className="text-xs text-gray-400">
+                {jwtToken ? `${new TextEncoder().encode(jwtToken).length} bytes (JWT format)` : 'No JWT token'}
+              </p>
+              <p className="text-xs text-blue-600">
+                ✏️ Fully editable - modify to test different tokens
+              </p>
+            </div>
           </div>
 
-          {/* Decrypt Section */}
-          <div className="p-4 sm:p-6 bg-orange-50 rounded-xl border border-orange-100">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
-              <div className="flex-1">
-                <h3 className="font-semibold text-orange-900">Decrypt Message</h3>
-                <p className="text-sm text-orange-700">Restore your original message</p>
+          {/* Verify Section */}
+          <div className="p-4 sm:p-6 bg-blue-50 rounded-xl border border-blue-100">
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+                <div className="flex-1">
+                  <h3 className="font-semibold text-blue-900">Verify Signature</h3>
+                  <p className="text-sm text-blue-700">Validate signature with public key</p>
+                </div>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
+                  <select
+                    value={verifyMode}
+                    onChange={(e) => setVerifyMode(e.target.value)}
+                    className="px-3 py-2 bg-white border border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="browser">JavaScript</option>
+                    <option value="server">Spring Boot</option>
+                  </select>
+                  <button
+                    onClick={handleVerify}
+                    disabled={!publicKey || !jwtToken || !message.trim() || operationStatus.verifying}
+                    className={`px-6 py-2 font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                      operationStatus.verifying 
+                        ? 'bg-blue-400 text-white' 
+                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                    }`}
+                  >
+                    {operationStatus.verifying ? 'Verifying...' : 'Verify'}
+                  </button>
+                </div>
               </div>
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
-                <select
-                  value={decryptMode}
-                  onChange={(e) => setDecryptMode(e.target.value)}
-                  className="px-3 py-2 bg-white border border-orange-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-                >
-                  <option value="browser">JavaScript</option>
-                  <option value="server">Spring Boot</option>
-                </select>
-                <button
-                  onClick={handleDecrypt}
-                  disabled={!privateKey || !ciphertext || operationStatus.decrypting}
-                  className={`px-6 py-2 font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                    operationStatus.decrypting 
-                      ? 'bg-orange-400 text-white' 
-                      : 'bg-orange-600 text-white hover:bg-orange-700'
-                  }`}
-                >
-                  {operationStatus.decrypting ? 'Decrypting...' : 'Decrypt'}
-                </button>
-                <button
-                  onClick={() => showCode('decrypt', decryptMode)}
-                  className="px-3 py-2 bg-orange-100 text-orange-700 text-sm font-medium rounded-lg hover:bg-orange-200 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-colors"
-                >
-                  📖
-                </button>
+              
+              {/* JWT Token Reference for Verification */}
+              <div>
+                <label className="block text-sm font-medium text-blue-700 mb-2">JWT Token to Verify</label>
+                <div className="p-3 bg-white border border-blue-200 rounded-lg">
+                  <p className="text-xs text-blue-800 mb-2">
+                    Using the JWT token from above ⬆️ (you can edit it directly in the JWT Token section)
+                  </p>
+                  <div className="p-2 bg-blue-50 rounded border">
+                    <code className="text-xs text-blue-600 break-all font-mono">
+                      {jwtToken || 'No JWT token available - sign a message first or paste one in the JWT Token section above'}
+                    </code>
+                  </div>
+                </div>
+                <p className="text-xs text-blue-600 mt-1">
+                  💡 To verify a different token, edit the JWT token in the section above
+                </p>
               </div>
             </div>
           </div>
 
-          {/* Decrypted Result */}
-          {decryptedText && (
-            <div className="p-6 bg-green-50 rounded-xl border border-green-100">
-              <label className="block text-sm font-medium text-green-700 mb-3">Decrypted Message</label>
-              <div className="p-4 bg-white border border-green-200 rounded-lg">
-                <p className="text-gray-800">{decryptedText}</p>
-              </div>
-              <div className="flex items-center mt-3">
+          {/* Verification Result */}
+          {verificationResult !== null && (
+            <div className={`p-6 rounded-xl border ${
+              verificationResult ? 'bg-green-50 border-green-100' : 'bg-red-50 border-red-100'
+            }`}>
+              <label className={`block text-sm font-medium mb-3 ${
+                verificationResult ? 'text-green-700' : 'text-red-700'
+              }`}>Verification Result</label>
+              <div className="flex items-center">
                 <div className={`w-2 h-2 rounded-full mr-2 ${
-                  decryptedText === plaintext ? 'bg-green-500' : 'bg-red-500'
+                  verificationResult ? 'bg-green-500' : 'bg-red-500'
                 }`}></div>
                 <span className={`text-sm font-medium ${
-                  decryptedText === plaintext ? 'text-green-700' : 'text-red-700'
+                  verificationResult ? 'text-green-700' : 'text-red-700'
                 }`}>
-                  {decryptedText === plaintext ? 'Message integrity verified' : 'Integrity check failed'}
+                  {verificationResult ? '✅ Signature is valid and authentic' : '❌ Signature verification failed'}
                 </span>
               </div>
             </div>
           )}
 
-          {/* RSA Info Box */}
+          {/* RSA Signing Info Box */}
           <div className="bg-blue-50 p-6 rounded-xl border border-blue-100">
-            <h4 className="font-medium text-blue-900 mb-3">🔐 RSA Key Usage</h4>
+            <h4 className="font-medium text-blue-900 mb-3">✍️ JWT Token Usage</h4>
             <div className="grid md:grid-cols-2 gap-4 text-sm text-blue-800">
               <div>
-                <p><strong>Public Key:</strong> Used for encryption (safe to share)</p>
-                <p><strong>Private Key:</strong> Used for decryption (keep secret)</p>
+                <p><strong>Private Key:</strong> Used for signing (keep secret)</p>
+                <p><strong>Public Key:</strong> Used for verification (safe to share)</p>
               </div>
               <div>
-                <p><strong>Security:</strong> Only private key can decrypt</p>
-                <p><strong>Use Case:</strong> Key exchange, digital signatures</p>
+                <p><strong>Security:</strong> Only private key can create signatures</p>
+                <p><strong>Use Case:</strong> Authentication, non-repudiation</p>
               </div>
             </div>
           </div>
@@ -557,7 +512,7 @@ export default function AsymmetricCrypto() {
                   />
                   <Bar 
                     dataKey="time" 
-                    fill="#8b5cf6"
+                    fill="#10b981"
                     radius={[4, 4, 0, 0]}
                   />
                 </BarChart>
@@ -577,38 +532,38 @@ export default function AsymmetricCrypto() {
                   </div>
                 </div>
               )}
-              {metrics.encryptTime && (
+              {metrics.signTime && (
                 <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                  <span className="text-gray-600">Encryption</span>
+                  <span className="text-gray-600">Signing</span>
                   <div className="text-right">
-                    <div className="font-mono text-sm">{metrics.encryptTime.toFixed(2)}ms</div>
+                    <div className="font-mono text-sm">{metrics.signTime.toFixed(2)}ms</div>
                     <div className="text-xs text-gray-500">
-                      {metrics.encryptMode === 'browser' ? 'JavaScript' : 'Spring Boot'}
+                      {metrics.signMode === 'browser' ? 'JavaScript' : 'Spring Boot'}
                     </div>
                   </div>
                 </div>
               )}
-              {metrics.decryptTime && (
+              {metrics.verifyTime && (
                 <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                  <span className="text-gray-600">Decryption</span>
+                  <span className="text-gray-600">Verification</span>
                   <div className="text-right">
-                    <div className="font-mono text-sm">{metrics.decryptTime.toFixed(2)}ms</div>
+                    <div className="font-mono text-sm">{metrics.verifyTime.toFixed(2)}ms</div>
                     <div className="text-xs text-gray-500">
-                      {metrics.decryptMode === 'browser' ? 'JavaScript' : 'Spring Boot'}
+                      {metrics.verifyMode === 'browser' ? 'JavaScript' : 'Spring Boot'}
                     </div>
                   </div>
                 </div>
               )}
-              {metrics.plaintextSize && (
+              {metrics.messageSize && (
                 <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                  <span className="text-gray-600">Input Size</span>
-                  <span className="font-mono text-sm">{metrics.plaintextSize} bytes</span>
+                  <span className="text-gray-600">Message Size</span>
+                  <span className="font-mono text-sm">{metrics.messageSize} bytes</span>
                 </div>
               )}
-              {metrics.ciphertextSize && (
+              {metrics.jwtTokenSize && (
                 <div className="flex justify-between items-center py-2">
-                  <span className="text-gray-600">Output Size</span>
-                  <span className="font-mono text-sm">{metrics.ciphertextSize} bytes</span>
+                  <span className="text-gray-600">JWT Token Size</span>
+                  <span className="font-mono text-sm">{metrics.jwtTokenSize} bytes</span>
                 </div>
               )}
             </div>
@@ -641,7 +596,7 @@ export default function AsymmetricCrypto() {
 
         <div className="bg-gray-900 rounded-lg p-6 max-h-80 overflow-y-auto">
           {logs.length === 0 ? (
-            <p className="text-gray-400">No activity yet. Start by generating a key pair or encrypting a message.</p>
+            <p className="text-gray-400">No activity yet. Start by generating a key pair or signing a message.</p>
           ) : (
             <div className="space-y-2">
               {logs.map((logEntry) => (
@@ -663,15 +618,6 @@ export default function AsymmetricCrypto() {
           )}
         </div>
       </div>
-
-      {/* Code Viewer Modal */}
-      <CodeViewer
-        currentContent={codeViewer.currentContent}
-        fullContent={codeViewer.fullContent}
-        title={codeViewer.title}
-        visible={codeViewer.visible}
-        onClose={closeCodeViewer}
-      />
     </div>
   );
 }

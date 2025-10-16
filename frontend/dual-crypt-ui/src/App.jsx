@@ -3,6 +3,7 @@ import Layout from './components/Layout';
 import Home from './components/Home';
 import SymmetricCrypto from './components/SymmetricCrypto';
 import AsymmetricCrypto from './components/AsymmetricCrypto';
+import Sign from './components/Sign';
 import './App.css'
 
 const router = createHashRouter([
@@ -21,6 +22,10 @@ const router = createHashRouter([
       {
         path: "asymmetric",
         element: <AsymmetricCrypto />,
+      },
+      {
+        path: "sign",
+        element: <Sign />,
       },
     ],
   },

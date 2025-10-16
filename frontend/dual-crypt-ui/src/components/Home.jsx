@@ -10,10 +10,10 @@ export default function Home() {
             Dual Crypt
           </h1>
           <p className="text-2xl font-light text-gray-600 max-w-2xl mx-auto leading-relaxed">
-            Symmetric and asymmetric encryption demo.
+            Symmetric encryption, asymmetric encryption, and digital signature demos.
           </p>
           <p className="text-lg text-gray-500 max-w-3xl mx-auto">
-            Spring Boot server encryption ↔ React client decryption. Get the code and use it.
+            Spring Boot server encryption/signing ↔ React client decryption/verification. Get the code and use it.
           </p>
         </div>
       </div>
@@ -26,13 +26,13 @@ export default function Home() {
               How it works
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-              Encrypt on the server, decrypt in the browser. Or vice versa. 
-              Both symmetric and asymmetric encryption work cross-platform.
+              Encrypt on the server, decrypt in the browser. Sign on the server, verify in the browser. Or vice versa. 
+              Symmetric encryption, asymmetric encryption, and digital signatures all work cross-platform.
             </p>
           </div>
 
-          {/* Two Pillars of Encryption */}
-          <div className="grid md:grid-cols-2 gap-16 mt-20">
+          {/* Three Pillars of Cryptography */}
+          <div className="grid md:grid-cols-3 gap-12 mt-20">
             {/* Symmetric Encryption */}
             <div className="text-center space-y-6">
               <div className="w-24 h-24 mx-auto bg-blue-500 rounded-full flex items-center justify-center mb-8">
@@ -74,6 +74,27 @@ export default function Home() {
                 </ul>
               </div>
             </div>
+
+            {/* Digital Signatures */}
+            <div className="text-center space-y-6">
+              <div className="w-24 h-24 mx-auto bg-emerald-500 rounded-full flex items-center justify-center mb-8">
+                <span className="text-4xl text-white">✍️</span>
+              </div>
+              <h3 className="text-3xl font-light text-gray-900">Sign & Verify</h3>
+              <p className="text-lg text-gray-600 leading-relaxed">
+                RSA-PSS digital signatures with JWT tokens. Sign with private key, verify with public key.
+                Ensure data authenticity and integrity.
+              </p>
+              <div className="bg-white p-6 rounded-2xl shadow-sm border">
+                <div className="text-sm text-gray-500 mb-3">What you get:</div>
+                <ul className="text-left space-y-2 text-gray-700">
+                  <li>• JWT token signing and verification</li>
+                  <li>• RSA-PSS signature implementation</li>
+                  <li>• Data authenticity verification</li>
+                  <li>• Cross-platform signature validation</li>
+                </ul>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -86,9 +107,9 @@ export default function Home() {
               Frontend ↔ Backend Integration
             </h2>
             <p className="text-xl text-gray-600 max-w-4xl mx-auto leading-relaxed">
-              Encrypt in Spring Boot, decrypt in React. 
-              Or encrypt in React, decrypt in Spring Boot. 
-              Both directions work with the same algorithms.
+              Encrypt in Spring Boot, decrypt in React. Sign in Spring Boot, verify in React.
+              Or encrypt in React, decrypt in Spring Boot. Sign in React, verify in Spring Boot.
+              All directions work with the same algorithms.
             </p>
           </div>
 
@@ -101,7 +122,7 @@ export default function Home() {
                 </div>
                 <h3 className="text-xl font-medium text-gray-900 mb-2">Spring Boot Server</h3>
                 <p className="text-gray-600">
-                  Generate keys and encrypt data with Java crypto libraries
+                  Generate keys, encrypt data, and sign tokens with Java crypto libraries
                 </p>
               </div>
               
@@ -115,16 +136,16 @@ export default function Home() {
                 </div>
                 <h3 className="text-xl font-medium text-gray-900 mb-2">React Browser</h3>
                 <p className="text-gray-600">
-                  Decrypt data using native Web Crypto API
+                  Decrypt data and verify signatures using native Web Crypto API
                 </p>
               </div>
             </div>
             
             <div className="text-center mt-12">
               <p className="text-lg text-gray-600 mb-8">
-                Compatible implementations. No compatibility issues.
+                Compatible encryption and signature implementations. No compatibility issues.
               </p>
-              <div className="grid md:grid-cols-2 gap-4">
+              <div className="grid md:grid-cols-3 gap-4">
                 <Link to="/symmetric" className="group">
                   <div className="bg-blue-50 hover:bg-blue-100 p-6 rounded-2xl transition-all border border-blue-200 hover:border-blue-300">
                     <div className="text-3xl mb-3">🔐</div>
@@ -137,6 +158,13 @@ export default function Home() {
                     <div className="text-3xl mb-3">🔑</div>
                     <h4 className="text-lg font-medium text-purple-900 mb-2">Try Asymmetric</h4>
                     <p className="text-purple-700 text-sm">Test RSA-2048 encryption</p>
+                  </div>
+                </Link>
+                <Link to="/sign" className="group">
+                  <div className="bg-emerald-50 hover:bg-emerald-100 p-6 rounded-2xl transition-all border border-emerald-200 hover:border-emerald-300">
+                    <div className="text-3xl mb-3">✍️</div>
+                    <h4 className="text-lg font-medium text-emerald-900 mb-2">Try Sign & Verify</h4>
+                    <p className="text-emerald-700 text-sm">Test JWT digital signatures</p>
                   </div>
                 </Link>
               </div>
@@ -172,11 +200,11 @@ export default function Home() {
               <ul className="space-y-3 text-gray-700">
                 <li className="flex items-center">
                   <span className="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
-                  Key generation and encryption
+                  Key generation, encryption & signing
                 </li>
                 <li className="flex items-center">
                   <span className="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
-                  AES-256-GCM & RSA-OAEP implementation
+                  AES-256-GCM, RSA-OAEP & RSA-PSS implementation
                 </li>
                 <li className="flex items-center">
                   <span className="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
@@ -267,25 +295,34 @@ export default function Home() {
             Try the demo
           </h2>
           <p className="text-xl text-gray-600 mb-12 leading-relaxed">
-            Choose your encryption method and test the integration.
+            Choose your cryptographic method and test the integration.
           </p>
           
-          <div className="grid md:grid-cols-2 gap-8 max-w-2xl mx-auto">
+          <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
             <Link to="/symmetric" className="group transform hover:scale-105 transition-all duration-300">
-              <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-8 rounded-3xl text-white text-center shadow-xl">
-                <div className="text-5xl mb-4">🔐</div>
-                <h3 className="text-2xl font-light mb-2">Symmetric</h3>
-                <p className="opacity-90">Single shared key</p>
-                <div className="mt-6 text-sm opacity-75">Test AES-256 →</div>
+              <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-3xl text-white text-center shadow-xl">
+                <div className="text-4xl mb-3">🔐</div>
+                <h3 className="text-xl font-light mb-2">Symmetric</h3>
+                <p className="opacity-90 text-sm">Single shared key</p>
+                <div className="mt-4 text-xs opacity-75">Test AES-256 →</div>
               </div>
             </Link>
             
             <Link to="/asymmetric" className="group transform hover:scale-105 transition-all duration-300">
-              <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-8 rounded-3xl text-white text-center shadow-xl">
-                <div className="text-5xl mb-4">🔑</div>
-                <h3 className="text-2xl font-light mb-2">Asymmetric</h3>
-                <p className="opacity-90">Public/private key pair</p>
-                <div className="mt-6 text-sm opacity-75">Test RSA-2048 →</div>
+              <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-6 rounded-3xl text-white text-center shadow-xl">
+                <div className="text-4xl mb-3">🔑</div>
+                <h3 className="text-xl font-light mb-2">Asymmetric</h3>
+                <p className="opacity-90 text-sm">Public/private key pair</p>
+                <div className="mt-4 text-xs opacity-75">Test RSA-2048 →</div>
+              </div>
+            </Link>
+            
+            <Link to="/sign" className="group transform hover:scale-105 transition-all duration-300">
+              <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 p-6 rounded-3xl text-white text-center shadow-xl">
+                <div className="text-4xl mb-3">✍️</div>
+                <h3 className="text-xl font-light mb-2">Sign & Verify</h3>
+                <p className="opacity-90 text-sm">Digital signatures</p>
+                <div className="mt-4 text-xs opacity-75">Test JWT signing →</div>
               </div>
             </Link>
           </div>

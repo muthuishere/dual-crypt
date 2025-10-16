@@ -121,6 +121,166 @@ class AsymmetricCryptoControllerE2ETest {
         assertThat(dec.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
+    @Test
+    @DisplayName("Generate -> Sign -> Verify happy path (JWT)")
+    void roundTripSignVerify() {
+        // 1) Generate keys
+        ResponseEntity<Map> genRes = rest.getForEntity(url("/api/asymmetric/generate"), Map.class);
+        assertThat(genRes.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        String pub = (String) genRes.getBody().get("publicKeyB64");
+        String prv = (String) genRes.getBody().get("privateKeyB64");
+
+        // 2) Sign data - should return JWT token
+        String dataToSign = "JWT-style signature test";
+        Map<String, Object> signReq = Map.of(
+                "data", dataToSign,
+                "privateKeyB64", prv
+        );
+        ResponseEntity<Map> signRes = postJson("/api/asymmetric/sign", signReq);
+        assertThat(signRes.getStatusCode()).isEqualTo(HttpStatus.OK);
+        String jwtToken = (String) signRes.getBody().get("text");
+        
+        // Ensure we got a JWT token (should have 3 parts separated by dots)
+        String[] jwtParts = jwtToken.split("\\.");
+        assertThat(jwtParts).hasSize(3);
+
+        // 3) Verify JWT token
+        Map<String, Object> verifyReq = Map.of(
+                "jwtToken", jwtToken,
+                "publicKeyB64", pub
+        );
+        ResponseEntity<Map> verifyRes = postJson("/api/asymmetric/verify", verifyReq);
+        assertThat(verifyRes.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(verifyRes.getBody().get("data")).isEqualTo(dataToSign);
+    }
+
+    @Test
+    @DisplayName("Verify with wrong public key -> 400 (JWT verification fails)")
+    void verifyWithWrongKeyReturns400() {
+        // Generate two bundles
+        String prv1, pub2;
+
+        {
+            ResponseEntity<Map> g1 = rest.getForEntity(url("/api/asymmetric/generate"), Map.class);
+            prv1 = (String) g1.getBody().get("privateKeyB64");
+        }
+        {
+            ResponseEntity<Map> g2 = rest.getForEntity(url("/api/asymmetric/generate"), Map.class);
+            pub2 = (String) g2.getBody().get("publicKeyB64");
+        }
+
+        // Sign with prv1 to create JWT
+        String data = "test-cross-key-verification";
+        ResponseEntity<Map> signRes = postJson("/api/asymmetric/sign", Map.of(
+                "data", data,
+                "privateKeyB64", prv1
+        ));
+        String jwtToken = (String) signRes.getBody().get("text");
+
+        // Try verify with wrong public key (from bundle 2) -> should return 400 (verification failure)
+        ResponseEntity<String> verifyRes = rest.postForEntity(url("/api/asymmetric/verify"),
+                jsonEntity(Map.of("jwtToken", jwtToken, "publicKeyB64", pub2)),
+                String.class);
+
+        assertThat(verifyRes.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    @DisplayName("Verify with tampered JWT -> 400 (JWT verification fails)")
+    void verifyWithTamperedJwtReturns400() {
+        // Generate keys
+        ResponseEntity<Map> genRes = rest.getForEntity(url("/api/asymmetric/generate"), Map.class);
+        String pub = (String) genRes.getBody().get("publicKeyB64");
+        String prv = (String) genRes.getBody().get("privateKeyB64");
+
+        // Sign original data to get JWT
+        String originalData = "original-message";
+        ResponseEntity<Map> signRes = postJson("/api/asymmetric/sign", Map.of(
+                "data", originalData,
+                "privateKeyB64", prv
+        ));
+        String jwtToken = (String) signRes.getBody().get("text");
+
+        // Tamper with the JWT signature part more effectively
+        String[] parts = jwtToken.split("\\.");
+        String tamperedSignature = parts[2].substring(0, parts[2].length() - 10) + "TAMPERED00";
+        String tamperedJwt = parts[0] + "." + parts[1] + "." + tamperedSignature;
+
+        System.out.println("Original JWT: " + jwtToken);
+        System.out.println("Tampered JWT: " + tamperedJwt);
+
+        // Try verify with tampered JWT -> should return 400 (verification failure)
+        ResponseEntity<String> verifyRes = rest.postForEntity(url("/api/asymmetric/verify"),
+                jsonEntity(Map.of("jwtToken", tamperedJwt, "publicKeyB64", pub)),
+                String.class);
+
+        System.out.println("Response status: " + verifyRes.getStatusCode());
+        System.out.println("Response body: " + verifyRes.getBody());
+
+        assertThat(verifyRes.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    @DisplayName("Sign with missing data -> 400")
+    void signMissingDataReturns400() {
+        Map<String, Object> badReq = new HashMap<>();
+        badReq.put("privateKeyB64", "abc"); // bogus, but we won't get that far
+
+        ResponseEntity<String> res = rest.postForEntity(url("/api/asymmetric/sign"),
+                jsonEntity(badReq), String.class);
+
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    @DisplayName("Verify with missing JWT token -> 400")
+    void verifyMissingJwtTokenReturns400() {
+        Map<String, Object> badReq = Map.of(
+                "publicKeyB64", "abc" // missing jwtToken
+        );
+
+        ResponseEntity<String> res = rest.postForEntity(url("/api/asymmetric/verify"),
+                jsonEntity(badReq), String.class);
+
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    @DisplayName("Sign and verify JSON claims")
+    void signVerifyJsonClaims() {
+        // Generate keys
+        ResponseEntity<Map> genRes = rest.getForEntity(url("/api/asymmetric/generate"), Map.class);
+        String pub = (String) genRes.getBody().get("publicKeyB64");
+        String prv = (String) genRes.getBody().get("privateKeyB64");
+
+        // Sign JSON claims
+        String jsonClaims = "{\"user\":\"john\",\"role\":\"admin\",\"permissions\":[\"read\",\"write\"]}";
+        ResponseEntity<Map> signRes = postJson("/api/asymmetric/sign", Map.of(
+                "data", jsonClaims,
+                "privateKeyB64", prv
+        ));
+        assertThat(signRes.getStatusCode()).isEqualTo(HttpStatus.OK);
+        String jwtToken = (String) signRes.getBody().get("text");
+
+        // Verify we got a proper JWT
+        String[] jwtParts = jwtToken.split("\\.");
+        assertThat(jwtParts).hasSize(3);
+
+        // Verify JWT and get back the claims
+        ResponseEntity<Map> verifyRes = postJson("/api/asymmetric/verify", Map.of(
+                "jwtToken", jwtToken,
+                "publicKeyB64", pub
+        ));
+        assertThat(verifyRes.getStatusCode()).isEqualTo(HttpStatus.OK);
+        
+        // Should get back the JSON claims (minus standard JWT claims like iat, exp)
+        String returnedData = (String) verifyRes.getBody().get("data");
+        assertThat(returnedData).contains("\"user\":\"john\"");
+        assertThat(returnedData).contains("\"role\":\"admin\"");
+        assertThat(returnedData).contains("\"permissions\":[\"read\",\"write\"]");
+    }
+
     // ---------- helpers ----------
     private ResponseEntity<Map> postJson(String path, Map<String, Object> body) {
         return rest.postForEntity(url(path), jsonEntity(body), Map.class);

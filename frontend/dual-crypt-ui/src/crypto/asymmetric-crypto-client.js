@@ -195,6 +195,232 @@ export class AsymmetricCryptoClient {
   }
 
   /**
+   * Sign message and return JWT token using RSA-PKCS1-v1_5 with SHA-256 (compatible with Spring Boot)
+   * @param {string} message - Message to sign
+   * @param {string|CryptoKey} privateKeyB64OrKey - Base64 private key or CryptoKey
+   * @param {boolean} useCache - Whether to use key caching (ignored if CryptoKey passed)
+   * @returns {Promise<{jwtToken: string}>} JWT token
+   */
+  async sign(message, privateKeyB64OrKey, useCache = true) {
+    const key = typeof privateKeyB64OrKey === "string" 
+      ? await this.importPrivateKeyForSigning(privateKeyB64OrKey, useCache) 
+      : privateKeyB64OrKey;
+    
+    const subtle = this.getSubtle();
+    
+    // Create JWT header
+    const header = {
+      alg: 'RS256',
+      typ: 'JWT'
+    };
+    
+    // Create JWT payload - detect if message is JSON or simple string
+    let payload = {};
+    
+    try {
+      // Try to parse as JSON
+      const parsed = JSON.parse(message);
+      if (typeof parsed === 'object' && parsed !== null) {
+        // Valid JSON object - use as claims
+        payload = { ...parsed };
+      } else {
+        // JSON primitive - wrap in data claim
+        payload.data = message;
+      }
+    } catch {
+      // Not valid JSON - treat as simple string
+      payload.data = message;
+    }
+    
+    // Add timestamp claims if not present
+    const now = Math.floor(Date.now() / 1000);
+    if (!payload.iat) payload.iat = now;
+    if (!payload.exp) payload.exp = now + 3600; // 1 hour expiration
+    
+    // Encode header and payload
+    const encodedHeader = this.base64UrlEncode(JSON.stringify(header));
+    const encodedPayload = this.base64UrlEncode(JSON.stringify(payload));
+    
+    // Create signature using RSASSA-PKCS1-v1_5 (same as Spring Boot's SHA256withRSA)
+    const signatureInput = `${encodedHeader}.${encodedPayload}`;
+    const signatureInputBytes = this.te.encode(signatureInput);
+    
+    const signature = await subtle.sign(
+      "RSASSA-PKCS1-v1_5", // Use PKCS#1 v1.5 to match Spring Boot
+      key, 
+      signatureInputBytes
+    );
+    
+    const encodedSignature = this.base64UrlEncode(signature);
+    const jwtToken = `${encodedHeader}.${encodedPayload}.${encodedSignature}`;
+    
+    return { jwtToken };
+  }
+
+  /**
+   * Verify JWT token and return original data (compatible with Spring Boot)
+   * @param {string} jwtToken - JWT token to verify
+   * @param {string|CryptoKey} publicKeyB64OrKey - Base64 public key or CryptoKey
+   * @param {boolean} useCache - Whether to use key caching (ignored if CryptoKey passed)
+   * @returns {Promise<{verified: boolean, data: string}>} Verification result
+   */
+  async verify(jwtToken, publicKeyB64OrKey, useCache = true) {
+    const key = typeof publicKeyB64OrKey === "string" 
+      ? await this.importPublicKeyForVerifying(publicKeyB64OrKey, useCache) 
+      : publicKeyB64OrKey;
+    
+    const subtle = this.getSubtle();
+    
+    try {
+      // Parse JWT token
+      const parts = jwtToken.split('.');
+      if (parts.length !== 3) {
+        throw new Error('Invalid JWT token format');
+      }
+      
+      const [encodedHeader, encodedPayload, encodedSignature] = parts;
+      
+      // Verify signature using RSASSA-PKCS1-v1_5
+      const signatureInput = `${encodedHeader}.${encodedPayload}`;
+      const signatureInputBytes = this.te.encode(signatureInput);
+      const signature = this.base64UrlDecode(encodedSignature);
+      
+      const verified = await subtle.verify(
+        "RSASSA-PKCS1-v1_5", // Use PKCS#1 v1.5 to match Spring Boot
+        key, 
+        signature, 
+        signatureInputBytes
+      );
+      
+      if (!verified) {
+        throw new Error('JWT signature verification failed');
+      }
+      
+      // Parse payload to extract original data
+      const payload = JSON.parse(this.base64UrlDecodeToString(encodedPayload));
+      
+      // Check expiration if present
+      if (payload.exp && Math.floor(Date.now() / 1000) > payload.exp) {
+        throw new Error('JWT token has expired');
+      }
+      
+      // Return original data (match Spring Boot logic)
+      if (payload.data !== undefined) {
+        // Was a simple string or JSON primitive
+        return { verified: true, data: payload.data };
+      } else {
+        // Was JSON claims - return as JSON string, removing standard JWT claims
+        const claims = { ...payload };
+        delete claims.iat;
+        delete claims.exp;
+        return { verified: true, data: JSON.stringify(claims) };
+      }
+      
+    } catch (error) {
+      throw new Error(`JWT verification failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Base64 URL encode (JWT format)
+   * @param {string|ArrayBuffer} input - Input to encode
+   * @returns {string} Base64 URL encoded string
+   */
+  base64UrlEncode(input) {
+    let base64;
+    if (typeof input === 'string') {
+      base64 = btoa(input);
+    } else {
+      base64 = this.b64.enc(input);
+    }
+    return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  }
+
+  /**
+   * Base64 URL decode to ArrayBuffer
+   * @param {string} input - Base64 URL encoded string
+   * @returns {ArrayBuffer} Decoded buffer
+   */
+  base64UrlDecode(input) {
+    // Add padding if needed
+    const padded = input + '='.repeat((4 - input.length % 4) % 4);
+    const base64 = padded.replace(/-/g, '+').replace(/_/g, '/');
+    return this.b64.dec(base64);
+  }
+
+  /**
+   * Base64 URL decode to string
+   * @param {string} input - Base64 URL encoded string
+   * @returns {string} Decoded string
+   */
+  base64UrlDecodeToString(input) {
+    // Add padding if needed
+    const padded = input + '='.repeat((4 - input.length % 4) % 4);
+    const base64 = padded.replace(/-/g, '+').replace(/_/g, '/');
+    return atob(base64);
+  }
+
+  /**
+   * Import RSA private key for signing (RSA-PSS)
+   * @param {string} privateKeyB64 - Base64 private key (PKCS#8)
+   * @param {boolean} useCache - Whether to use key caching
+   * @returns {Promise<CryptoKey>} Imported private key
+   */
+  async importPrivateKeyForSigning(privateKeyB64, useCache = true) {
+    const cacheKey = `sign-priv-${privateKeyB64}`;
+    if (useCache && this.keyCache.has(cacheKey)) {
+      return this.keyCache.get(cacheKey);
+    }
+
+    const keyData = this.b64.dec(privateKeyB64);
+    const key = await this.getSubtle().importKey(
+      "pkcs8", 
+      keyData, 
+      { 
+        name: "RSASSA-PKCS1-v1_5", 
+        hash: "SHA-256" 
+      }, 
+      false, 
+      ["sign"]
+    );
+    
+    if (useCache) {
+      this.keyCache.set(cacheKey, key);
+    }
+    return key;
+  }
+
+  /**
+   * Import RSA public key for verification (RSA-PSS)
+   * @param {string} publicKeyB64 - Base64 public key (SPKI)
+   * @param {boolean} useCache - Whether to use key caching
+   * @returns {Promise<CryptoKey>} Imported public key
+   */
+  async importPublicKeyForVerifying(publicKeyB64, useCache = true) {
+    const cacheKey = `verify-pub-${publicKeyB64}`;
+    if (useCache && this.keyCache.has(cacheKey)) {
+      return this.keyCache.get(cacheKey);
+    }
+
+    const keyData = this.b64.dec(publicKeyB64);
+    const key = await this.getSubtle().importKey(
+      "spki", 
+      keyData, 
+      { 
+        name: "RSASSA-PKCS1-v1_5", 
+        hash: "SHA-256" 
+      }, 
+      false, 
+      ["verify"]
+    );
+    
+    if (useCache) {
+      this.keyCache.set(cacheKey, key);
+    }
+    return key;
+  }
+
+  /**
    * Clear the key cache
    */
   clearCache() {

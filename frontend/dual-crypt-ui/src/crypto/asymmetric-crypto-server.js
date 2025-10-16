@@ -1,4 +1,4 @@
-import { getAsymmetricGenerateUrl, getAsymmetricEncryptUrl, getAsymmetricDecryptUrl, createHeaders } from '../config/config.js';
+import { getAsymmetricGenerateUrl, getAsymmetricEncryptUrl, getAsymmetricDecryptUrl, getAsymmetricSignUrl, getAsymmetricVerifyUrl, createHeaders } from '../config/config.js';
 
 /**
  * Server-side asymmetric crypto operations using the Spring Boot API
@@ -67,6 +67,56 @@ export class AsymmetricCryptoServer {
     }
     
     return await response.json();
+  }
+
+  /**
+   * Sign message using server-side RSA-PKCS1-v1_5 and create JWT token
+   * @param {string} message - Message to sign
+   * @param {string} privateKeyB64 - Base64 encoded RSA private key (PKCS#8 format)
+   * @returns {Promise<{jwtToken: string}>}
+   */
+  async sign(message, privateKeyB64) {
+    const response = await fetch(getAsymmetricSignUrl(), {
+      method: 'POST',
+      headers: createHeaders(),
+      body: JSON.stringify({
+        data: message,
+        privateKeyB64: privateKeyB64
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const result = await response.json();
+    // Convert from Spring Boot response format { "text": "jwtToken" } to expected format
+    return { jwtToken: result.text };
+  }
+
+  /**
+   * Verify JWT token using server-side RSA-PKCS1-v1_5
+   * @param {string} jwtToken - JWT token to verify
+   * @param {string} publicKeyB64 - Base64 encoded RSA public key (SPKI format)
+   * @returns {Promise<{verified: boolean, data: string}>}
+   */
+  async verify(jwtToken, publicKeyB64) {
+    const response = await fetch(getAsymmetricVerifyUrl(), {
+      method: 'POST',
+      headers: createHeaders(),
+      body: JSON.stringify({
+        jwtToken: jwtToken,
+        publicKeyB64: publicKeyB64
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const result = await response.json();
+    // Convert from Spring Boot response format { "data": "originalData" } to expected format
+    return { verified: true, data: result.data };
   }
 
   /**

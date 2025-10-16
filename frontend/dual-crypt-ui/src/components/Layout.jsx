@@ -9,6 +9,7 @@ export default function Layout() {
     { path: '/', label: 'Home', icon: '🏠' },
     { path: '/symmetric', label: 'Symmetric Encryption', icon: '🔐' },
     { path: '/asymmetric', label: 'Asymmetric Encryption', icon: '🔑' },
+    { path: '/sign', label: 'Sign & Verify', icon: '✍️' },
   ];
 
   const [navOpen, setNavOpen] = useState(false);

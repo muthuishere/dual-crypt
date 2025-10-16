@@ -25,7 +25,9 @@ const API_CONFIG = {
     ASYMMETRIC: {
       GENERATE: '/api/asymmetric/generate',
       ENCRYPT: '/api/asymmetric/encrypt',
-      DECRYPT: '/api/asymmetric/decrypt'
+      DECRYPT: '/api/asymmetric/decrypt',
+      SIGN: '/api/asymmetric/sign',
+      VERIFY: '/api/asymmetric/verify'
     },
 
   },
@@ -59,6 +61,8 @@ export const getSymmetricDecryptUrl = () => buildUrl(API_CONFIG.ENDPOINTS.SYMMET
 export const getAsymmetricGenerateUrl = () => buildUrl(API_CONFIG.ENDPOINTS.ASYMMETRIC.GENERATE);
 export const getAsymmetricEncryptUrl = () => buildUrl(API_CONFIG.ENDPOINTS.ASYMMETRIC.ENCRYPT);
 export const getAsymmetricDecryptUrl = () => buildUrl(API_CONFIG.ENDPOINTS.ASYMMETRIC.DECRYPT);
+export const getAsymmetricSignUrl = () => buildUrl(API_CONFIG.ENDPOINTS.ASYMMETRIC.SIGN);
+export const getAsymmetricVerifyUrl = () => buildUrl(API_CONFIG.ENDPOINTS.ASYMMETRIC.VERIFY);
 
 // Helper function to create request headers
 export const createHeaders = (additionalHeaders = {}) => {

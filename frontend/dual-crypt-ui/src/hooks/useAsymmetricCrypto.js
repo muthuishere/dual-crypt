@@ -4,7 +4,109 @@ import { AsymmetricCryptoClient } from '../crypto/asymmetric-crypto-client.js';
 import { AsymmetricCryptoServer } from '../crypto/asymmetric-crypto-server.js';
 
 /**
- * Custom hook for managing asymmetric crypto operations with both client and server support
+ * Custom hook for managing asymmetric crypto operations with  }, [decryptMode, privateKey, keyCaching, clientCrypto, serverCrypto, log, getActualMode, getFallbackMode]);
+
+  // Sign message
+  const sign = useCallback(async (message) => {
+    if (!privateKey || !message.trim()) {
+      const msg = 'Please generate keys and enter message to sign';
+      setError(msg);
+      log(`⚠️ ${msg}`, 'error');
+      return { success: false, error: msg };
+    }
+
+    const preferredMode = getActualMode(signMode);
+    const actualMode = getFallbackMode(preferredMode, 'sign');
+    
+    if (!actualMode) {
+      const errorMsg = `Cannot sign: ${preferredMode} mode is not available`;
+      setError(errorMsg);
+      log(`❌ ${errorMsg}`, 'error');
+      return { success: false, error: errorMsg };
+    }
+    
+    const crypto = actualMode === 'browser' ? clientCrypto : serverCrypto;
+    
+    setError('');
+    log(`${crypto.icon} Signing message using ${crypto.name}...`, 'info');
+    
+    try {
+      const startTime = performance.now();
+      const result = actualMode === 'browser'
+        ? await crypto.sign(message, privateKey, keyCaching)
+        : await crypto.sign(message, privateKey);
+      const endTime = performance.now();
+      
+      const timing = endTime - startTime;
+      
+      log(`✅ Message signed in ${timing.toFixed(2)}ms`, 'success');
+      log(`🖊️ Signature: ${result.signatureB64.substring(0, 50)}...`, 'info');
+      
+      return { 
+        success: true, 
+        signatureB64: result.signatureB64, 
+        mode: actualMode, 
+        timing 
+      };
+    } catch (error) {
+      const errorMsg = `❌ Signing failed: ${error.message}`;
+      log(errorMsg, 'error');
+      setError(errorMsg);
+      return { success: false, error: error.message };
+    }
+  }, [signMode, privateKey, keyCaching, clientCrypto, serverCrypto, log, getActualMode, getFallbackMode]);
+
+  // Verify signature
+  const verify = useCallback(async (signatureB64, message) => {
+    if (!publicKey || !signatureB64.trim() || !message.trim()) {
+      const msg = 'Please provide public key, signature, and message to verify';
+      setError(msg);
+      log(`⚠️ ${msg}`, 'error');
+      return { success: false, error: msg };
+    }
+
+    const preferredMode = getActualMode(verifyMode);
+    const actualMode = getFallbackMode(preferredMode, 'verify');
+    
+    if (!actualMode) {
+      const errorMsg = `Cannot verify: ${preferredMode} mode is not available`;
+      setError(errorMsg);
+      log(`❌ ${errorMsg}`, 'error');
+      return { success: false, error: errorMsg };
+    }
+    
+    const crypto = actualMode === 'browser' ? clientCrypto : serverCrypto;
+    
+    setError('');
+    log(`${crypto.icon} Verifying signature using ${crypto.name}...`, 'info');
+    
+    try {
+      const startTime = performance.now();
+      const result = actualMode === 'browser'
+        ? await crypto.verify(signatureB64, message, publicKey, keyCaching)
+        : await crypto.verify(signatureB64, message, publicKey);
+      const endTime = performance.now();
+      
+      const timing = endTime - startTime;
+      
+      log(`✅ Signature verification completed in ${timing.toFixed(2)}ms`, 'success');
+      log(`${result.verified ? '✅' : '❌'} Signature is ${result.verified ? 'valid' : 'invalid'}`, result.verified ? 'success' : 'error');
+      
+      return { 
+        success: true, 
+        verified: result.verified, 
+        mode: actualMode, 
+        timing 
+      };
+    } catch (error) {
+      const errorMsg = `❌ Verification failed: ${error.message}`;
+      log(errorMsg, 'error');
+      setError(errorMsg);
+      return { success: false, error: error.message };
+    }
+  }, [verifyMode, publicKey, keyCaching, clientCrypto, serverCrypto, log, getActualMode, getFallbackMode]);
+
+  // Clear functionsth client and server support
  */
 export function useAsymmetricCrypto() {
   // Persistent state
@@ -16,6 +118,8 @@ export function useAsymmetricCrypto() {
   const [generateMode, setGenerateMode] = useState('browser');
   const [encryptMode, setEncryptMode] = useState('browser');
   const [decryptMode, setDecryptMode] = useState('browser');
+  const [signMode, setSignMode] = useState('browser');
+  const [verifyMode, setVerifyMode] = useState('browser');
   const keyCaching = true; // Always enabled for browser mode
   const [serverStatus, setServerStatus] = useState('unknown');
   const [webCryptoAvailable, setWebCryptoAvailable] = useState(false);
@@ -234,6 +338,114 @@ export function useAsymmetricCrypto() {
     }
   }, [decryptMode, privateKey, keyCaching, clientCrypto, serverCrypto, log, getActualMode, getFallbackMode]);
 
+  // Sign message
+  const sign = useCallback(async (message) => {
+    if (!privateKey || !message.trim()) {
+      const msg = 'Please generate keys and enter message to sign';
+      setError(msg);
+      log(`⚠️ ${msg}`, 'error');
+      return { success: false, error: msg };
+    }
+
+    const preferredMode = getActualMode(signMode);
+    const actualMode = getFallbackMode(preferredMode, 'sign');
+    
+    if (!actualMode) {
+      const errorMsg = `Cannot sign: ${preferredMode} mode is not available`;
+      setError(errorMsg);
+      log(`❌ ${errorMsg}`, 'error');
+      return { success: false, error: errorMsg };
+    }
+    
+    const crypto = actualMode === 'browser' ? clientCrypto : serverCrypto;
+    
+    setError('');
+    log(`${crypto.icon} Creating JWT token using ${crypto.name}...`, 'info');
+    
+    try {
+      const startTime = performance.now();
+      const result = actualMode === 'browser'
+        ? await crypto.sign(message, privateKey, keyCaching)
+        : await crypto.sign(message, privateKey);
+      const endTime = performance.now();
+      
+      const timing = endTime - startTime;
+      
+      log(`✅ JWT token created in ${timing.toFixed(2)}ms`, 'success');
+      log(`🎫 JWT token: ${result.jwtToken.substring(0, 50)}...`, 'info');
+      
+      return { 
+        success: true, 
+        jwtToken: result.jwtToken, 
+        mode: actualMode, 
+        timing,
+        metrics: {
+          messageSize: new TextEncoder().encode(message).length,
+          jwtTokenSize: new TextEncoder().encode(result.jwtToken).length
+        }
+      };
+    } catch (error) {
+      const errorMsg = `❌ JWT creation failed: ${error.message}`;
+      log(errorMsg, 'error');
+      setError(errorMsg);
+      return { success: false, error: error.message };
+    }
+  }, [signMode, privateKey, keyCaching, clientCrypto, serverCrypto, log, getActualMode, getFallbackMode]);
+
+  // Verify JWT token
+  const verify = useCallback(async (jwtToken) => {
+    if (!publicKey || !jwtToken.trim()) {
+      const msg = 'Please generate keys and provide JWT token to verify';
+      setError(msg);
+      log(`⚠️ ${msg}`, 'error');
+      return { success: false, error: msg };
+    }
+
+    const preferredMode = getActualMode(verifyMode);
+    const actualMode = getFallbackMode(preferredMode, 'verify');
+    
+    if (!actualMode) {
+      const errorMsg = `Cannot verify: ${preferredMode} mode is not available`;
+      setError(errorMsg);
+      log(`❌ ${errorMsg}`, 'error');
+      return { success: false, error: errorMsg };
+    }
+    
+    const crypto = actualMode === 'browser' ? clientCrypto : serverCrypto;
+    
+    setError('');
+    log(`${crypto.icon} Verifying JWT token using ${crypto.name}...`, 'info');
+    
+    try {
+      const startTime = performance.now();
+      const result = actualMode === 'browser'
+        ? await crypto.verify(jwtToken, publicKey, keyCaching)
+        : await crypto.verify(jwtToken, publicKey);
+      const endTime = performance.now();
+      
+      const timing = endTime - startTime;
+      
+      log(`✅ JWT verification completed in ${timing.toFixed(2)}ms`, 'success');
+      log(`🔍 JWT ${result.verified ? 'is valid' : 'is invalid'}`, result.verified ? 'success' : 'error');
+      if (result.verified && result.data) {
+        log(`📄 Original data: "${result.data}"`, 'info');
+      }
+      
+      return { 
+        success: true, 
+        verified: result.verified, 
+        data: result.data || null,
+        mode: actualMode, 
+        timing 
+      };
+    } catch (error) {
+      const errorMsg = `❌ JWT verification failed: ${error.message}`;
+      log(errorMsg, 'error');
+      setError(errorMsg);
+      return { success: false, error: error.message };
+    }
+  }, [verifyMode, publicKey, keyCaching, clientCrypto, serverCrypto, log, getActualMode, getFallbackMode]);
+
   // Clear functions
   const clearAll = useCallback(() => {
     setPublicKey('');
@@ -263,6 +475,10 @@ export function useAsymmetricCrypto() {
     setEncryptMode,
     decryptMode,
     setDecryptMode,
+    signMode,
+    setSignMode,
+    verifyMode,
+    setVerifyMode,
     keyCaching,
     logs,
     error,
@@ -273,10 +489,17 @@ export function useAsymmetricCrypto() {
     generateKeys,
     encrypt,
     decrypt,
+    sign,
+    verify,
     clearAll,
     clearStoredKeys,
     clearLogs,
     log,
+    
+    // Key setters
+    setPublicKey,
+    setPrivateKey,
+    setSalt,
     
     // Utilities
     getActualMode,

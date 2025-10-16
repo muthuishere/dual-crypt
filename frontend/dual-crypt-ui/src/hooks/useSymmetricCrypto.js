@@ -242,6 +242,8 @@ export function useSymmetricCrypto() {
     // State
     secretKey,
     salt,
+    setSecretKey,
+    setSalt,
     generateMode,
     setGenerateMode,
     encryptMode,
