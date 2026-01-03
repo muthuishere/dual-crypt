@@ -34,6 +34,7 @@ tasks:
     cmds:
       - kamal deploy
 
+
   kamal-proxy-reboot:
     desc: Reboot and upgrade kamal-proxy on the server
     cmds:
